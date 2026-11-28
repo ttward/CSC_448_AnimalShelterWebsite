@@ -1,5 +1,7 @@
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 import {
   PawPrint,
   Eye,
@@ -12,7 +14,11 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+  
     firstName: "",
     lastName: "",
     email: "",
@@ -27,16 +33,62 @@ export default function Register() {
     });
   };
 
-  const handleSubmit = (e) => {
+  
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
+    setMessage("");
+    setError("");
+
     if (formData.password !== formData.confirmPassword) {
-      alert("Your passwords do not match!");
+      setError("Your passwords do not match!");
       return;
     }
 
-    alert("Your registration form is ready! Account creation will be connected later.");
+    if (formData.password.length < 8) {
+      setError("Your password must be at least 8 characters.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        setMessage("Your account has been created successfully!");
+      } else {
+        setMessage(
+          "Registration successful! Please check your email to confirm your account."
+        );
+      }
+
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   const inputStyle =
     "w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-sm text-stone-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/10 placeholder:text-stone-400";
@@ -258,13 +310,26 @@ export default function Register() {
                 </span>
               </label>
 
+              {error && (
+              <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+                {error}
+              </div>
+              )}
+
+              {message && (
+              <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">
+                {message}
+              </div>
+              )}
+
               {/* Submit */}
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-md transition hover:bg-emerald-900 hover:shadow-lg"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-md transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Create account
-                <ArrowRight size={18} />
+                {loading ? "Creating account..." : "Create account"}
+                {!loading && <ArrowRight size={18} />}
               </button>
 
             </form>
@@ -272,9 +337,12 @@ export default function Register() {
             {/* Sign in */}
             <p className="mt-8 text-center text-sm text-stone-500">
               Already have an account?{" "}
-              <span className="font-semibold text-emerald-800">
-                Sign in coming soon
-              </span>
+              <Link
+                to="/login"
+                className="font-semibold text-emerald-800 hover:text-emerald-900"
+              >
+                Sign in
+              </Link>
             </p>
 
             <p className="mt-8 text-center text-xs text-stone-400">
